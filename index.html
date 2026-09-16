@@ -181,7 +181,7 @@ textarea{width:100%;min-height:80px;border:1px solid #d9dee3;border-radius:10px;
 
 <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
 <script>
-const API_URL='https://script.google.com/macros/s/AKfycbxdoowD030YW2f-wYsbcDByKOU4kZ47fA2c3yRzokRJG0Mjzu6jXYWZFfO38YCugxHZ/exec';
+const API_URL='https://script.google.com/macros/s/AKfycby3o_CDLUCmMU0C0Vf8Q1whF98a4Jjc4u3BTiWqN1kgU2u5_lgtUO1hWxL2ivP6K9IW/exec';
 const LIFF_ID='2011365656-ywbEibA9';
 
 let idToken='',items=[],selectedId='';
@@ -193,37 +193,12 @@ function esc(v){
 }
 
 async function api(body){
-  let responseText='';
-  const action = body && body.action ? body.action : '';
-  try{
-    const r=await fetch(API_URL,{
-      method:'POST',
-      headers:{'Content-Type':'text/plain;charset=utf-8'},
-      body:JSON.stringify({...body,idToken})
-    });
-    responseText=await r.text();
-    if(!r.ok){
-      throw new Error(
-        'Apps Script API error: HTTP '+r.status+
-        '\nAction: '+action+
-        '\nURL: '+API_URL+
-        '\nResponse: '+responseText.slice(0,500)
-      );
-    }
-    try{
-      return JSON.parse(responseText);
-    }catch(e){
-      throw new Error(
-        'Apps Script ตอบกลับไม่ใช่ JSON'+
-        '\nAction: '+action+
-        '\nURL: '+API_URL+
-        '\nResponse: '+responseText.slice(0,500)
-      );
-    }
-  }catch(err){
-    console.error('API CALL ERROR',{action,url:API_URL,response:responseText,error:err});
-    throw err;
-  }
+  const r=await fetch(API_URL,{
+    method:'POST',
+    headers:{'Content-Type':'text/plain;charset=utf-8'},
+    body:JSON.stringify({...body,idToken})
+  });
+  return r.json();
 }
 
 function showPage(pageId){
