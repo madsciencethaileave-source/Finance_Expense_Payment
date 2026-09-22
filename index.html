@@ -114,6 +114,7 @@ textarea{width:100%;min-height:80px;border:1px solid #d9dee3;border-radius:10px;
         <button class="secondary" id="refreshBtn">รีเฟรช</button>
       </div>
     </div>
+    <div class="toolbar" style="margin:10px 0;display:grid;grid-template-columns:1fr 1fr;gap:8px"><select id="filterMonth" class="select"><option value="">ทุกเดือน</option></select><select id="filterYear" class="select"><option value="">ทุกปี</option></select></div>
     <div id="list" class="loading">กำลังโหลด...</div>
   </div>
 </section>
@@ -181,7 +182,7 @@ textarea{width:100%;min-height:80px;border:1px solid #d9dee3;border-radius:10px;
 
 <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
 <script>
-const API_URL='https://script.google.com/macros/s/AKfycbzXJmkWE4--9DQ2wtyPUdJtGKW6ORwCVbwDWAy9xqQn91AQt3M5CT5JI0jnHeCqrTjt/exec';
+const API_URL='https://script.google.com/macros/s/AKfycby53Bp68mhyIebrh5hVsS4hCGLU9EX1j35LFSfNe457RVjShIDhI6PgGYBOSif0lTMU/exec';
 const LIFF_ID='2011365656-ywbEibA9';
 
 let idToken='',items=[],selectedId='';
@@ -231,22 +232,30 @@ function showPage(pageId){
 }
 
 function render(){
-  const pending=items.filter(x=>x.status==='Pending Finance').length;
-  const approved=items.filter(x=>x.status==='Approved'&&x.paymentStatus!=='Paid').length;
-  const paid=items.filter(x=>x.paymentStatus==='Paid').length;
+  const month=filterMonth.value, year=filterYear.value;
+  const viewItems=items.filter(x=>{
+    if(!month && !year) return true;
+    const s=String(x.date||'');
+    const m=s.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
+    if(!m) return false;
+    return (!month || m[2]===month) && (!year || m[3]===year);
+  });
+  const pending=viewItems.filter(x=>x.status==='Pending Finance').length;
+  const approved=viewItems.filter(x=>x.status==='Approved'&&x.paymentStatus!=='Paid').length;
+  const paid=viewItems.filter(x=>x.paymentStatus==='Paid').length;
 
   pendingCount.textContent=pending;
   approvedCount.textContent=approved;
   paidCount.textContent=paid;
 
   const box=list;
-  if(!items.length){
+  if(!viewItems.length){
     box.innerHTML='<div class="loading">ไม่มีรายการ</div>';
     return;
   }
 
   box.className='';
-  box.innerHTML=items.map(x=>{
+  box.innerHTML=viewItems.map(x=>{
     let action='';
     if(x.status==='Pending Finance')
       action='<button class="primary" onclick="approveItem(\''+esc(x.expenseId)+'\')">อนุมัติรายการ</button>';
@@ -261,6 +270,7 @@ function render(){
       +'<div style="text-align:right"><b>'+Number(x.total||0).toLocaleString()+' บาท</b>'
       +'<div class="small">'+esc(x.date)+'</div></div></div>'
       +'<div style="margin-top:8px">'+esc(x.purpose||'-')+'</div>'
+      +(x.paymentStatus==='Paid'?'<div class="small" style="margin-top:6px">วันที่จ่าย: '+esc(x.paymentDate||'-')+'</div>':'')
       +'<div style="margin-top:8px">'
       +'<span class="badge '+(x.status==='Approved'?'approved':'pending')+'">'
       +(x.status==='Approved'?'อนุมัติแล้ว':'รอ Finance')+'</span> '
@@ -275,11 +285,19 @@ function render(){
   }).join('');
 }
 
+function initFinanceFilters(){
+  const now=new Date();
+  for(let m=1;m<=12;m++){const o=document.createElement('option');o.value=String(m).padStart(2,'0');o.textContent=String(m).padStart(2,'0');filterMonth.appendChild(o)}
+  for(let y=now.getFullYear()-2;y<=now.getFullYear()+1;y++){const o=document.createElement('option');o.value=String(y);o.textContent=String(y);filterYear.appendChild(o)}
+  filterMonth.value=String(now.getMonth()+1).padStart(2,'0');filterYear.value=String(now.getFullYear());
+  filterMonth.onchange=load; filterYear.onchange=load;
+}
+
 async function load(){
   list.className='loading';
   list.textContent='กำลังโหลด...';
   try{
-    const r=await api({action:'getFinanceExpenseList'});
+    const r=await api({action:'getFinanceExpenseList',month:filterMonth.value,year:filterYear.value});
     if(!r.success){
       list.className='error';
       list.textContent=r.message||'ไม่มีสิทธิ์';
@@ -457,7 +475,7 @@ async function init(){
   }
 }
 
-window.addEventListener('load',init);
+window.addEventListener('load',()=>{initFinanceFilters();init();});
 </script>
 </body>
 </html>
